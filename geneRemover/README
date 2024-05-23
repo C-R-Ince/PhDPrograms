@@ -1,3 +1,5 @@
-This is the source code for a C++ program designed to edit an inputted fasta file. 
-The program takes an inputted string and copies the fasta file, omitting any entries that contain the regex inputted.
+This contains the source code for two C++ program designed to edit an inputted file. 
+geneRemover.src is designed to work with fasta files.
+geneRemoverBED.src is an adapted version of geneRemover.src to work with BED files.
+The programms takes an inputted string and copies the file, omitting any entries that contain the regex inputted.
 The input is expected to be inclosed in quotes and thefore the first and last remove characters are removed, i.e. input: "ERV", regex: ERV
