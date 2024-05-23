@@ -1,0 +1,119 @@
+//================================================================================================
+// Name        : geneRemoverBED.cpp
+// Author      : CRInce
+// Version     : 0.1
+// Copyright   : Your copyright notice
+// Description : software designed to remove genes from a BED file based on user inputted regex
+//================================================================================================
+
+#include <iostream>
+#include <fstream>
+#include <regex>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <filesystem>
+
+bool isFile(const std::string& path) {
+    struct stat buffer;
+    return (stat(path.c_str(), &buffer) == 0);
+}
+
+int main(int argc, char* argv[]) {
+    std::string fastaPath;
+    std::string outputPath;
+    std::string genePath;
+
+    std::ofstream outFile;
+    std::ifstream fastaFile;
+
+    std::string lineA;
+
+    // Use getopt to handle command line arguments with flags
+    int opt;
+    while ((opt = getopt(argc, argv, "g:f:o:")) != -1) {
+        switch (opt) {
+            case 'g':
+                genePath = optarg;
+                continue;
+            case 'f':
+                fastaPath = optarg;
+                continue;
+            case 'o':
+                outputPath = optarg;
+                continue;
+            default:
+                // Handle incorrect or missing arguments
+                std::cerr << "Usage: " << argv[0] << " -g gene_motif -f fasta_file -o output_file\n";
+                return 1;
+        }
+    }
+    if (genePath.empty()) {
+        std::cerr << "Please provide a string to identify genes to be removed i.e. \"ERV\" using -g \nUsage: " << argv[0] << " -g gene_motif -f fasta_file -o output_fil$
+          return 1;
+      }
+
+    int opt;
+    while ((opt = getopt(argc, argv, "g:f:o:")) != -1) {
+        switch (opt) {
+            case 'g':
+                genePath = optarg;
+                continue;
+            case 'f':
+                fastaPath = optarg;
+                continue;
+            case 'o':
+                outputPath = optarg;
+                continue;
+            default:
+                // Handle incorrect or missing arguments
+                std::cerr << "Usage: " << argv[0] << " -g gene_motif -f fasta_file -o output_file\n";
+                return 1;
+        }
+    }
+    if (genePath.empty()) {
+        std::cerr << "Please provide a string to identify genes to be removed i.e. \"ERV\" using -g \nUsage: " << argv[0] << " -g gene_motif -f fasta_file -o output_fil$
+          return 1;
+      }
+      if (fastaPath.empty()) {
+        std::cerr << "Please provide a file using -f \nUsage: " << argv[0] << " -g gene_motif -f fasta_file -o output_file \n";
+          return 1;
+      }
+      if (outputPath.empty()) {
+        std::cerr << "Please provide an out path using -o \nUsage: " << argv[0] << " -g gene_motif -f fasta_file -o output_file \n";
+          return 1;
+      }
+
+      if (!std::filesystem::is_directory(outputPath)) {
+          std::filesystem::path parentPath = std::filesystem::path(fastaPath).parent_path();
+          outputPath = (parentPath / outputPath).string();
+          std::cout << "Output is not a directory, setting out path to: " << outputPath << std::endl;
+      }
+
+    fastaFile.open(fastaPath);
+    outFile.open(outputPath);
+
+    if (!fastaFile.is_open() || !outFile.is_open()) {
+        std::cerr << "Error opening files\n";
+        return 1;
+    }
+        genePath.erase(remove( genePath.begin(), genePath.end(), '\"' ),genePath.end()); //Remove " "
+    // Clear and reset the position of the fastaFile to the beginning
+    fastaFile.clear();
+    fastaFile.seekg(0, std::ios::beg);
+    //std::cout << "Looking for: " << genePath << std::endl;
+
+    bool geneMatch = false;
+    while (getline(fastaFile, lineA)) {
+        if (lineA.find(genePath) != std::string::npos) {
+            // Check if the gene is in the header line using std::string::find
+                geneMatch = true;
+        } else if(lineA.at(0) == '>' && lineA.find(genePath) == std::string::npos){
+                geneMatch = false;
+                outFile << lineA << '\n';  // Write unmatched header line
+        } else if (lineA.at(0) != '>' && geneMatch == false){
+                outFile << lineA << '\n';
+        } else if (lineA.at(0) != '>' && geneMatch == true){
+        }
+    }
+    return 0;
+}
