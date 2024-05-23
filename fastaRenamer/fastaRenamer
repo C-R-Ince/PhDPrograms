@@ -1,0 +1,402 @@
+//============================================================================
+// Name        : fastaRenamer.cpp
+// Author      : CRInce
+// Version     : 2.0
+// Copyright   : Your copyright notice
+// Description : software to rename fasta headers by a inputted GTF
+//============================================================================
+
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <regex>
+#include <stdlib.h>
+
+std::string outFilePath(std::string fastaPath);
+std::string getDelim(std::ifstream &fastaFile);
+
+int main(int argc, char* argv[]) {
+
+	std::string input;
+	bool exited = false;
+
+	//Declare file paths
+	std::string fastaPath;
+	std::string annotationPath;
+	std::string outPath;
+
+	//Declare gene delimiter
+	std::string geneDelimiter;
+
+	//Declare files
+	std::ifstream fastaFile;
+	std::ifstream annotationFile;
+	std::ofstream outFile;
+
+	std::cout	<< " --------------------------\n┆ Welcome to fastaRenamer! ┆\n -------------------------- \n \n";
+
+	if (argc == 5){
+			fastaPath = argv[1];
+			annotationPath = argv[2];
+			outPath = argv[3];
+			geneDelimiter = argv[4];
+			//std::cout << filePath << std::endl << annotationPath << std::endl << outPath << std::endl << geneDelimiter << std::endl;
+			fastaFile.open(fastaPath);
+			annotationFile.open(annotationPath);
+			outFile.open(outPath);
+
+			std::cout << "Running with " << argc << "arguements supplied." << std::endl;
+			outFile.close();
+
+		} else if (argc == 4){
+			fastaPath = argv[1];
+			annotationPath = argv[2];
+			outPath = argv[3];
+			std::cout << "A delimiter is required." << std::endl;
+			fastaFile.open(fastaPath);
+			geneDelimiter = getDelim(fastaFile); //Gets the gene delimiter: after '>' but before the gene
+
+			annotationFile.open(annotationPath);
+			outFile.open(outPath);
+
+			std::cout << "Running with " << argc << "arguements supplied and geneDelimiter determined." << std::endl;
+			outFile.close();
+
+		} else if (argc != 5 && argc != 4){
+		std::cout << "Four arguements are needed to intiate: \n1. fasta file, \n2. corresponding GTF, \n3. output file, \n4. gene delimiter" << std::endl;
+		std::cout << "\nDo you wish for to run the program and input these or do you wish to quit the application and try again \nRun/Quit" << std::endl;
+		std::cin >> input;
+		if (input != "r" && input != "R" && input != "run" && input != "Run" && input != "RUN"){
+			void exit();
+			exited = true;
+		} else {
+			do {
+					// Get fasta file input
+					std::cout << "Please input the path of the fasta file:" << std::endl;
+					std::cin >> fastaPath;
+
+					// Open the file
+					fastaFile.open(fastaPath);
+
+					if (!fastaFile.good()) {
+						std::cout << "Error! File not found. Please try again."
+								<< std::endl;
+					} else {
+						std::cout << "File found!\n" << std::endl;
+						break;  // Exit the loop if a valid file is found
+					}
+				} while (true);
+
+
+				do {
+					// Get annotation file input
+					std::cout << "Please input the path of the GTF annotation file:"
+							<< std::endl;
+					std::cin >> annotationPath;
+
+					// Open the file
+					annotationFile.open(annotationPath);
+
+					if (!annotationFile.good()) {
+						std::cout << "Error! File not found. Please try again."
+								<< std::endl;
+					} else {
+						std::cout << "File found!\n" << std::endl;
+						break;  // Exit the loop if a valid file is found
+					}
+				} while (true);
+
+				// Get output path
+				outPath = outFilePath(fastaPath);
+				outFile.open(outPath);
+
+				geneDelimiter = getDelim(fastaFile); //Gets the gene delimiter: after '>' but before the gene
+				outFile.close();
+		}
+	}
+
+	//create a file for the corresponding GTF
+	std::string outPathGTF = outPath + "GTF";
+	std::ofstream outFileGTF;
+	outFileGTF.open(outPathGTF);
+	outFile.open(outPath);
+
+	std::string lineA; // Line for fastaFile
+	std::string lineB; // Line for annotationFile
+	std::string replacementLine; // Line to replace
+
+	// Information to extract from fastaFile
+	std::string gene;
+	std::string chr;
+	std::string range1A;
+	std::string range2A;
+
+	// Information to extract from annotationFile
+	std::string chrB;
+	std::string range1B;
+	std::string range2B;
+	std::vector<std::string> column1, column4, column5; // Variables to store data from columns 1, 4, and 5
+	std::string transcriptID;
+	std::vector<std::string> transcriptRepeats;
+	int userID = 0;
+
+	// Reset file pointer to the beginning of the annotation file
+	fastaFile.clear();
+	fastaFile.seekg(0);
+
+	while (getline(fastaFile, lineA)) {
+		if (lineA.at(0) == '>') {
+			// Code to extract gene information
+			if (lineA.find(geneDelimiter) != std::string::npos) {
+				//std::cout << lineA << std::endl;
+				//std::cout << "GD: " << geneDelimiter << std::endl;
+				// Get gene
+				size_t first = lineA.find(geneDelimiter);
+				size_t last = lineA.find(" ");
+				std::string gene = lineA.substr(first + geneDelimiter.size(),
+						last - first - geneDelimiter.size());
+				//std::cout << "gene: " + gene << std::endl; // to test the gene
+				lineA = lineA.substr(last);
+				//std::cout << "new line: " + lineA << std::endl; // to test the gene has been removed from the line
+
+				// Code to extract Chr, Range1A and Range 2A here
+				// Extract Chr
+				first = lineA.find("chr");
+				last = lineA.find(":");
+				std::string chr = "chr"
+						+ lineA.substr(first + 3, last - (first + 3));
+				//std::cout << "chr: " + chr << std::endl; // to test the chr
+				lineA = lineA.substr(last);
+				// std::cout << "new line: " + lineA << std::endl; // to test the chr has been removed from the line
+
+				// Extract Range1A
+				first = lineA.find(":");
+				last = lineA.find("-", lineA.find(range1A));
+				std::string range1A = lineA.substr(first + 1, last - first - 1);
+				//std::cout << "range1A: " + range1A << std::endl; // to test the first range
+				lineA = lineA.substr(last);
+				//std::cout << "new line: " + lineA << std::endl; // to test that the first range has been removed
+
+				// Extract Range2A
+				first = lineA.find("-");
+				last = lineA.find(" 5'");
+				std::string range2A = lineA.substr(first + 1, last - first - 1);
+				//std::cout << "range2A: " + range2A << std::endl; // to test the second range
+				lineA = lineA.substr(last);
+				//std::cout << "new line: " + lineA << std::endl; // to test the second range has been removed
+				//std::cout << "Before do while \nGene=" + gene + " Chr=" + chr + " range1A=" + range1A + " range2A=" + range2A << std::endl; // to test that all the fasta outputs are correct
+				do {
+
+					do {
+						getline(annotationFile, lineB);
+						//std::cout << lineB << std::endl;
+					} while (lineB.find(gene) == std::string::npos);
+					// Use a stringstream to parse the TSV line
+					std::istringstream iss(lineB);
+
+					// Read values from columns 1, 4, and 5
+					std::string chrB, dummy1, dummy2, range1B, range2B;
+
+					if (iss >> chrB >> dummy1 >> dummy2 >> range1B >> range2B) {
+						// Store values in respective vectors
+						column1.push_back(chrB);
+						column4.push_back(range1B);
+						column5.push_back(range2B);
+						//To test that the correct value have been extracted from the GTF
+						//std::cout << "Debug: Gene=" + gene + "\nChr=" + chr + " range1A=" + range1A + " range2A=" + range2A + "\nChrB=" + chrB + " range1B=" + range1B + " range2B=" + range2B + "\nEND OF DEBUG" << std::endl;
+					}
+					if (chr == chrB && range1A == range1B
+							&& range2A == range2B) {
+						//std::cout << "looking for transcriptID" << std::endl;
+						std::regex pattern("transcript_id\\s+\"([^\"]*)\""); // Define a regular expression pattern
+						std::smatch match; 	// Create a match object
+
+						// Search for the pattern in the line
+						if (std::regex_search(lineB, match, pattern)) {
+							//std::cout << "inside regex" << std::endl;
+							// The matched string is in match[1]
+							std::string transcriptID = match[1];
+							//std::cout << "HERE: transcriptID= " + transcriptID << std::endl; // to test the transcript_ID is correctly extracted
+							//std::string documentOutFile((std::istreambuf_iterator<char>(outFile)), std::istreambuf_iterator<char>());
+
+						    if (std::find(transcriptRepeats.begin(), transcriptRepeats.end(), transcriptID) != transcriptRepeats.end()){
+						    	//std::cout << "Inside transcript repeat" << std::endl;
+						    	//std::cout << chrB << std::endl;
+						    	transcriptID = transcriptID  + "_" + chrB;
+						    	if (std::find(transcriptRepeats.begin(), transcriptRepeats.end(), transcriptID) != transcriptRepeats.end()){
+						    		transcriptID = transcriptID + "_userID" + std::to_string(userID);
+						    		userID++;
+						    		replacementLine = ">" + transcriptID;
+						    		//replace GTF first
+						    		lineB = lineB.substr(0, match.position(1)) + transcriptID + "\";";
+							    	//+ transcriptID.length()
+
+						    		//add the additional info before adding to outFile
+						    		replacementLine = replacementLine + " range=" + range1A + "-" + range2A;
+						    		// Then add to outFIle
+						    		outFile << replacementLine << std::endl;
+						    		outFileGTF << lineB << std::endl;
+						    		transcriptRepeats.push_back(transcriptID);
+						    		//std::cout << "check if transcriptId is already present: " + replacementLine << std::endl;
+						    	} else
+						    	replacementLine = ">" + transcriptID;
+						    	//replace GTF first
+						    	lineB = lineB.substr(0, match.position(1)) + transcriptID + "\";";
+						    	//+ transcriptID.length()
+
+						    	//add the additional info before adding to outFile
+						    	replacementLine = replacementLine + " range=" + range1A + "-" + range2A;
+						    	// Then add to outFIle
+								outFile << replacementLine << std::endl;
+								outFileGTF << lineB << std::endl;
+								transcriptRepeats.push_back(transcriptID);
+								//std::cout << "check if transcriptId is already present: " + replacementLine << std::endl;
+						    } else {
+						    //std::cout << "Inside transcript repeat else" << std::endl;
+							// Replace line
+							replacementLine = ">" + transcriptID + " range="
+									+ chr + ":" + range1A + "-" + range2A;
+							outFile << replacementLine << std::endl;
+							outFileGTF << lineB << std::endl;
+							transcriptRepeats.push_back(transcriptID);
+							//std::cout << "TranscriptId not previously seen: " + replacementLine << std::endl;
+						    }
+
+						}
+					}
+//					else {
+//						std::cout
+//								<< "Debug: 'transcript_id' not found in lineB."
+//								<< std::endl;
+//					}
+
+				} while (chr == chrB && range1A == range1B && range2A == range2B);
+
+			} else {
+				replacementLine = lineA;
+				//std::cout << "No geneDelimiter: " << replacementLine << std::endl; // to test if the replacement line is correct if the geneDelimiter was not found
+				outFile << replacementLine << std::endl;
+				outFileGTF << lineB << std::endl;
+
+			}
+
+		} else {
+			replacementLine = lineA;
+			outFile << replacementLine << std::endl;
+			//std::cout << "No >: " << replacementLine << std::endl; // to test that the replacement line is correct for non-fasta headers, i.e. sequence
+
+		}
+	}
+
+	if(exited == true){
+		std::cout << "\nProgram terminated by user\n" << std::endl;
+	} else if (exited == false){
+	std::cout << "\nFile generated, " << outPath << ", replacements complete\n" << std::endl;
+	}
+	// Reset file pointer to the beginning of the annotation file
+	annotationFile.clear();
+	annotationFile.seekg(0);
+	return 0;
+}
+
+std::string outFilePath(std::string fastaPath) {
+	std::string outPath;
+	std::string path;
+	std::string answer; //="n"
+	do {
+		std::cout << "Please write the desired outpaths (both the fasta and corresponding GTF will be saved here):" << std::endl;
+		std::cin >> outPath;
+		if (outPath.find('/') == std::string::npos) {
+			std::string::size_type pos = fastaPath.find_last_of('/');
+			if (pos != std::string::npos) {
+				path = fastaPath.substr(0, pos) + "/" + outPath;
+				std::cout << "File will be outputted here: " + path
+						<< std::endl;
+				std::cout << "Confirm? 'Y'/'N'" << std::endl;
+				std::cin >> answer;
+				continue;
+			} else {
+				return path = outPath;
+				answer = "y";
+			}
+
+		} else {
+			return path = outPath;
+			answer = "y";
+		}
+	} while (answer != "y" && answer != "Y" && answer != "yes"
+			&& answer != "Yes" && answer != "YES");
+	return path;
+}
+
+std::string getDelim(std::ifstream &fastaFile) {
+	int gD;
+	std::string line;
+	std::string answer;
+	std::string geneDelimiter;
+    std::string documentContent((std::istreambuf_iterator<char>(fastaFile)), std::istreambuf_iterator<char>());
+
+	do {
+		std::cout
+				<< "\nDefine the string proceeding '>' but preceding the gene name: \n1: Repeatmasker, hg38_rmsk_ \n2: Gencode, hg38_knownGene_ \n3: Custom Input"
+				<< std::endl;
+		std::cin >> gD;
+
+		switch (gD) {
+		case 1:
+			geneDelimiter = "hg38_rmsk_";
+			//while (getline(fastaFile, line)) {
+				if (documentContent.find(geneDelimiter) != std::string::npos) {
+					std::cout << geneDelimiter + " found in file, running fastaRenamer." << std::endl;
+					answer = "y";
+					break;
+				} else {
+					std::cout
+							<< "Gene delimiter not found, are you sure you want to proceed? Y/N"
+							<< std::endl;
+					std::cin >> answer;
+				}
+			//}
+			break;
+
+		case 2:
+			geneDelimiter = "hg38_knownGene_";
+			//while (getline(fastaFile, line)) {
+				if (documentContent.find(geneDelimiter) != std::string::npos) {
+					std::cout << geneDelimiter + " found in file, running fastaRenamer." << std::endl;
+					answer = "y";
+					break;
+				} else {
+					std::cout
+							<< "Gene delimiter not found, are you sure you want to proceed? Y/N"
+							<< std::endl;
+					std::cin >> answer;
+				}
+			//}
+			break;
+
+		case 3:
+			std::cout << "Please input a custom string:" << std::endl;
+			std::cin >> geneDelimiter;
+			//while (getline(fastaFile, line)) {
+				if (documentContent.find(geneDelimiter) != std::string::npos) {
+					std::cout << geneDelimiter + " found in file, running fastaRenamer." << std::endl;
+					answer = "y";
+					break;
+				} else {
+					std::cout
+							<< "Gene delimiter not found, are you sure you want to proceed? 'Y'/'N' "
+							<< std::endl;
+					std::cin >> answer;
+				}
+			//}
+			break;
+
+		default:
+			answer = "n";
+			break;
+		}
+	} while (answer != "y" && answer != "Y" && answer != "yes"
+			&& answer != "Yes" && answer != "YES");
+	return geneDelimiter;
