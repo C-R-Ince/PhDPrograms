@@ -1,1 +1,3 @@
-
+This is the source code for a C++ program designed to edit an inputted fasta file. 
+The program takes an inputted string and copies the fasta file, omitting any entries that contain the regex inputted.
+The input is expected to be inclosed in quotes and thefore the first and last remove characters are removed, i.e. input: "ERV", regex: ERV
