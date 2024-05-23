@@ -1,10 +1,10 @@
-//================================================================================
+//=================================================================================================
 // Name        : geneRemover.cpp
 // Author      : CRInce
 // Version     : 1.0
 // Copyright   : Your copyright notice
-// Description : software designed to remove genes based on user inputted regex
-//================================================================================
+// Description : software designed to remove genes from a fasta file based on user inputted regex
+//=================================================================================================
 
 #include <iostream>
 #include <fstream>
