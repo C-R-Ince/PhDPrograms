@@ -1,3 +1,8 @@
 This is the source code for a c++ program designed to edit fasta files so that each gene name is unique by appending chromosome information as well as, if needed, a unique id.
 The program will output an editted gtf file that corresponds to the newly created fasta file. 
 The program outputs SalmonTE compatable fastas and the user can choose if the tabulated entry following the geneid reflects the geneid of the gtf (subfamily quantification) or repeats the unique gene name (loci quantification)
+
+This program processes an inputted fasta file and ensures that every entry has a unique gene name. This is ensured by taking the name of the gene, the chromosome and locus and then searching the inputted gtf for these parameters. 
+The gene name is then appended with the chromosome. This new name is entered into a temporary file which is also used to check further names to ensure that it is not reused. 
+Additionally, for use with SalmonTE, the user is able to select subfamily or loci level. This option will append a tab separated entry to the gene name, as required for SalmonTE indexing. 
+This entry will either reflect the subfamily or the unique gene name depending on the user’s input. Finally, the program writes a new gtf file reflecting the new gene names used.  
